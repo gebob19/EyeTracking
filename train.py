@@ -74,9 +74,8 @@ if __name__ == '__main__':
 
     options, args = parser.parse_args()
 
-    epochs = options.epochs
-    BATCH_SIZE = options.bs
-    print(epochs, BATCH_SIZE)
+    epochs = int(options.epochs)
+    BATCH_SIZE = int(options.bs)
 
     # testdf = pd.read_csv('test-df.csv')
     traindf = pd.read_csv('train-df.csv')
