@@ -68,14 +68,15 @@ if __name__ == '__main__':
     action="store", dest="epochs",
     help="epochs", default="10")
 
-    parser.add_option('-bs', '--batch_size',
+    parser.add_option('-b', '--batch_size',
     action="store", dest="bs",
-    help="bs", default="16")
+    help="b", default="16")
 
     options, args = parser.parse_args()
 
     epochs = options.epochs
     BATCH_SIZE = options.bs
+    print(epochs, BATCH_SIZE)
 
     # testdf = pd.read_csv('test-df.csv')
     traindf = pd.read_csv('train-df.csv')
