@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from keras.losses import mean_squared_error
 from keras.optimizers import RMSprop
-from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping
+from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping, TensorBoard
 
 from model import mobnet
 
@@ -79,47 +79,46 @@ if __name__ == '__main__':
     BATCH_SIZE = int(options.bs)
 
     # learning_rate = [1e-2, 1e-3, 3e-3]
+    # 224, 224, 3 with pretrained weigths ~ 7 epochs => train mae ~2cm
+    shapes = [(224, 224, 3), (320, 568, 3), (424, 680, 3)]
+    model_resize = [(224, 280, 1), (450, 512, 1), (960, 901, 1)]
+    model_weights = ['imagenet', None, None]
+    
 
     # testdf = pd.read_csv('test-df.csv')
-    # reduce dset 25% of original size to evaulate models faster
-    # 2.4 million * 0.15 = 360,000 frame dset
-    traindf = pd.read_csv('train-df.csv').sample(frac=0.15) 
+    traindf = pd.read_csv('portrait-train-df.csv').sample(frac=1) 
     train, val = train_test_split(traindf, test_size=0.1)
 
-    model_name = "basemodel_imgnet_224x224"
-    model = mobnet((HEIGHT, WIDTH, 3))
-    model.compile(loss = {'y_xcam': mean_squared_error,
-                        'y_ycam': mean_squared_error},
-                  optimizer = RMSprop(),
-                  metrics = ['accuracy', 'mae'])
 
-    callbacks = [
-        ReduceLROnPlateau(monitor='val_loss',
-                        factor=0.2,
-                        patience=4,
-                        verbose=1,
-                        min_delta=1e-5),
-        # ModelCheckpoint(monitor='val_loss',
-        #                 filepath='best_weights.hdf5',
-        #                 save_best_only=True,
-        #                 verbose=1)
-    ]
+    for shape, weights in zip(shapes, model_weights):
 
-    model.fit_generator(generator=train_generator(train),
-                            steps_per_epoch=np.ceil(float(len(train)) / float(BATCH_SIZE)),
-                            epochs=epochs,
+        model_name = "basemodel_{}".format(shape)
+        model = mobnet(shape, weights)
+
+        model.compile(loss = {'y_xcam': mean_squared_error,
+                            'y_ycam': mean_squared_error},
+                    optimizer = RMSprop(),
+                    metrics = ['mae'])
+
+        callbacks = [
+            ReduceLROnPlateau(monitor='val_loss',
+                            factor=0.2,
+                            patience=4,
                             verbose=1,
-                            callbacks=callbacks,
-                            validation_data=train_generator(val),
-                            validation_steps=np.ceil(float(len(val)) / float(BATCH_SIZE)))
+                            min_delta=1e-5),
+            TensorBoard(log_dir='./{}-logs'.format(model_name),
+                        batch_size=BATCH_SIZE)
+        ]
 
-    metrics = model.evaluate_generator(train_generator(val), steps=np.ceil(float(len(val)) / float(BATCH_SIZE)))
-    metric_names = model.metrics_names
+        model.fit_generator(generator=train_generator(train),
+                                steps_per_epoch=np.ceil(float(len(train)) / float(BATCH_SIZE)),
+                                epochs=epochs,
+                                verbose=1,
+                                callbacks=callbacks,
+                                validation_data=train_generator(val),
+                                validation_steps=np.ceil(float(len(val)) / float(BATCH_SIZE)))
 
-    with open('results.txt', 'a') as f:
-        f.write("model {} results: ".format(model_name))
-        f.write(str(metric_names))
-        f.write(str(metrics))
-        f.write("\n")
+        
 
 
+`
