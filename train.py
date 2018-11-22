@@ -80,7 +80,6 @@ if __name__ == '__main__':
 
     # learning_rate = [1e-2, 1e-3, 3e-3]
 
-
     # testdf = pd.read_csv('test-df.csv')
     # reduce dset 25% of original size to evaulate models faster
     # 2.4 million * 0.15 = 360,000 frame dset
@@ -114,7 +113,7 @@ if __name__ == '__main__':
                             validation_data=train_generator(val),
                             validation_steps=np.ceil(float(len(val)) / float(BATCH_SIZE)))
 
-    metrics = model.evaluate_generator(train_generator(val), steps=np.ceil(float(len(val)) / float(BATCH_SIZE))
+    metrics = model.evaluate_generator(train_generator(val), steps=np.ceil(float(len(val)) / float(BATCH_SIZE)))
     metric_names = model.metrics_names
 
     with open('results.txt', 'a') as f:
