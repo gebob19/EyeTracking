@@ -19,17 +19,14 @@ xcam_alpha = 1
 xcam_dm = 1
 
 # reshape shape for gateway mobnet output
-nshape = (224, 280, 1)
-
-def mobnet(shape):
+def mobnet(shape, weights, reshape):
     model_in = MobileNetV2(input_shape=shape,
-#                     alpha=alpha,
-#                     depth_multiplier=depth_multiplier,
                     include_top=False,
-                    weights='imagenet',
+                    weights=weights,
                     pooling=None)
+
     rename_layers(model_in, 'gateway')
-    x = Reshape(nshape)(model_in.output)
+    x = Reshape(reshape)(model_in.output)
 
     # prediction of x gaze position
     xcam_net = MobileNetV2(input_tensor=x,
