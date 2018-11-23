@@ -33,7 +33,7 @@ def threadsafe_generator(f):
     return g
 
 @threadsafe_generator
-def train_generator(df):
+def train_generator(df, shape):
     while True:
         shuffle_indices = np.arange(len(df))
         shuffle_indices = np.random.permutation(shuffle_indices)
@@ -48,7 +48,7 @@ def train_generator(df):
             
             for _fn in df_batch['file_names']:
                 img = cv2.imread('{}/{}'.format(dset_path, _fn))
-                img = cv2.resize(img, (WIDTH, HEIGHT), interpolation=cv2.INTER_AREA)
+                img = cv2.resize(img, (shape[1], shape[0]), interpolation=cv2.INTER_AREA)
                 
 #               # === You can add data augmentations here. === #
 #                 if np.random.random() < 0.5:
@@ -59,8 +59,6 @@ def train_generator(df):
             yield np.asarray(x_batch), {'y_xcam': y_xbatch, 'y_ycam': y_ybatch}
 
 if __name__ == '__main__':
-    WIDTH = 224
-    HEIGHT = 224
     dset_path = '../gazecapture'
 
     parser = optparse.OptionParser()
@@ -71,54 +69,61 @@ if __name__ == '__main__':
 
     parser.add_option('-b', '--batch_size',
     action="store", dest="bs",
-    help="b", default="32")
+    help="b", default="16")
+
+    parser.add_option('-s', '--shape',
+    action="store", dest="s",
+    help="s", default="(224, 224, 3)")
+
+    parser.add_option('-r', '--resize',
+    action="store", dest="r",
+    help="r", default="(224, 280, 1)")
+
+    # parser.add_option('-l', '--lr',
+    # action="store", dest="lr",
+    # help="lr", default="1e-3")
 
     options, args = parser.parse_args()
 
     epochs = int(options.epochs)
     BATCH_SIZE = int(options.bs)
+    shape = eval(options.s)
+    resize = eval(options.r)
+
 
     # learning_rate = [1e-2, 1e-3, 3e-3]
     # 224, 224, 3 with pretrained weigths ~ 7 epochs => train mae ~2cm
-    shapes = [(224, 224, 3), (320, 568, 3), (424, 680, 3)]
-    model_resize = [(224, 280, 1), (450, 512, 1), (960, 901, 1)]
-    model_weights = ['imagenet', None, None]
+    # shapes = [(224, 224, 3), (320, 568, 3), (424, 680, 3)]
+    # model_resize = [(224, 280, 1), (450, 512, 1), (616, 640, 1)]
+    # model_weights = [None, None, None]
     
 
     # testdf = pd.read_csv('test-df.csv')
-    traindf = pd.read_csv('portrait-train-df.csv').sample(frac=1) 
+    traindf = pd.read_csv('portrait-train-df.csv').sample(frac=0.01) 
     train, val = train_test_split(traindf, test_size=0.1)
 
+    model_name = "basemodel_{}".format(shape)
+    model = mobnet(shape, None, resize)
 
-    for shape, weights in zip(shapes, model_weights):
+    model.compile(loss = {'y_xcam': mean_squared_error,
+                        'y_ycam': mean_squared_error},
+            optimizer = RMSprop(),
+                metrics = ['mae'])
 
-        model_name = "basemodel_{}".format(shape)
-        model = mobnet(shape, weights)
+    callbacks = [
+        ReduceLROnPlateau(monitor='val_loss',
+                        factor=0.2,
+                        patience=4,
+                        verbose=1,
+                        min_delta=1e-5),
+        TensorBoard(log_dir='./logs/{}-logs'.format(model_name),
+                    batch_size=BATCH_SIZE)
+    ]
 
-        model.compile(loss = {'y_xcam': mean_squared_error,
-                            'y_ycam': mean_squared_error},
-                    optimizer = RMSprop(),
-                    metrics = ['mae'])
-
-        callbacks = [
-            ReduceLROnPlateau(monitor='val_loss',
-                            factor=0.2,
-                            patience=4,
+    model.fit_generator(generator=train_generator(train, shape),
+                            steps_per_epoch=np.ceil(float(len(train)) / float(BATCH_SIZE)),
+                            epochs=epochs,
                             verbose=1,
-                            min_delta=1e-5),
-            TensorBoard(log_dir='./{}-logs'.format(model_name),
-                        batch_size=BATCH_SIZE)
-        ]
-
-        model.fit_generator(generator=train_generator(train),
-                                steps_per_epoch=np.ceil(float(len(train)) / float(BATCH_SIZE)),
-                                epochs=epochs,
-                                verbose=1,
-                                callbacks=callbacks,
-                                validation_data=train_generator(val),
-                                validation_steps=np.ceil(float(len(val)) / float(BATCH_SIZE)))
-
-        
-
-
-`
+                            callbacks=callbacks,
+                            validation_data=train_generator(val, shape),
+                            validation_steps=np.ceil(float(len(val)) / float(BATCH_SIZE)))
