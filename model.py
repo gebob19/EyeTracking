@@ -19,41 +19,16 @@ xcam_alpha = 1
 xcam_dm = 1
 
 # reshape shape for gateway mobnet output
-def mobnet(shape, weights, reshape):
+def mobnet(shape, weights):
     model_in = MobileNetV2(input_shape=shape,
                     include_top=False,
                     weights=weights,
                     pooling=None)
 
-    rename_layers(model_in, 'gateway')
-    x = Reshape(reshape)(model_in.output)
+    x = Flatten()(model_in.output)
+    x = Dense(100, activation=None)(x)
+    y = Dense(2, activation=None)(x)
 
-    # prediction of x gaze position
-    xcam_net = MobileNetV2(input_tensor=x,
-                        alpha=xcam_alpha,
-                        depth_multiplier=xcam_dm,
-                        include_top=False,
-                        weights=None)
-    xcam_out = Flatten()(xcam_net.output)
-    y_xcam = Dense(1, activation=None, name='y_xcam')(xcam_out)
-
-    # prediction of y gaze position
-    ycam_net = MobileNetV2(input_tensor=x,
-                        alpha=ycam_alpha,
-                        depth_multiplier=ycam_dm,
-                        include_top=False,
-                        weights=None)
-    ycam_out = Flatten()(ycam_net.output)
-    y_ycam = Dense(1, activation=None, name='y_ycam')(ycam_out)
-
-    # fix to keras multiple layers with same name bug
-    rename_layers(xcam_net, '-xgaze')
-    rename_layers(ycam_net, '-ygaze')
-
-    model = Model(inputs=model_in.input, outputs=[y_xcam, y_ycam])
+    model = Model(inputs=model_in.input, outputs=y)
 
     return model
-
-
-def rename_layers(model, postfix):
-    for l in model.layers: l.name = l.name + postfix

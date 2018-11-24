@@ -43,20 +43,23 @@ def train_generator(df, shape):
             df_batch = df.iloc[shuffle_indices[start:end]]
             
             x_batch = []
-            y_xbatch = df_batch['XCam']
-            y_ybatch = df_batch['YCam']
+            y_batch = []
             
-            for _fn in df_batch['file_names']:
+            xcam = df_batch['XCam']
+            ycam = df_batch['YCam']
+            
+            for index, _fn in enumerate(df_batch['file_names']):
                 img = cv2.imread('{}/{}'.format(dset_path, _fn))
                 img = cv2.resize(img, (shape[1], shape[0]), interpolation=cv2.INTER_AREA)
-                
+
 #               # === You can add data augmentations here. === #
 #                 if np.random.random() < 0.5:
 #                     img, mask = img[:, ::-1, :], mask[..., ::-1, :]  # random horizontal flip
                 
+                y_batch.append(xcam[index], ycam[index])
                 x_batch.append(img)
             
-            yield np.asarray(x_batch), {'y_xcam': y_xbatch, 'y_ycam': y_ybatch}
+            yield np.asarray(x_batch), np.asarray(y_batch)
 
 if __name__ == '__main__':
     dset_path = '../gazecapture'
@@ -75,13 +78,9 @@ if __name__ == '__main__':
     action="store", dest="s",
     help="s", default="(224, 224, 3)")
 
-    parser.add_option('-r', '--resize',
-    action="store", dest="r",
-    help="r", default="(224, 280, 1)")
-
-    # parser.add_option('-l', '--lr',
-    # action="store", dest="lr",
-    # help="lr", default="1e-3")
+    parser.add_option('-l', '--lr',
+    action="store", dest="lr",
+    help="lr", default="1e-3")
 
     options, args = parser.parse_args()
 
@@ -90,24 +89,25 @@ if __name__ == '__main__':
     shape = eval(options.s)
     resize = eval(options.r)
 
-
-    # learning_rate = [1e-2, 1e-3, 3e-3]
-    # 224, 224, 3 with pretrained weigths ~ 7 epochs => train mae ~2cm
-    # shapes = [(224, 224, 3), (320, 568, 3), (424, 680, 3)]
-    # model_resize = [(224, 280, 1), (450, 512, 1), (616, 640, 1)]
+    # learning_rate = [4e-3, 1e-3]
+    # # 224, 224, 3 with pretrained weigths ~ 7 epochs => train mae ~2cm
+    # shapes = (320, 568, 3)
+    # model_resize = (450, 512, 1)
     # model_weights = [None, None, None]
     
 
     # testdf = pd.read_csv('test-df.csv')
-    traindf = pd.read_csv('portrait-train-df.csv').sample(frac=0.01) 
-    train, val = train_test_split(traindf, test_size=0.1)
+    train = pd.read_csv('portrait-train-df.csv')
+    val = pd.read_csv('portrait-train-df.csv')
+
+    # train, val = train_test_split(traindf, test_size=0.1)
 
     model_name = "basemodel_{}".format(shape)
-    model = mobnet(shape, None, resize)
+    model = mobnet(shape, 'imagenet')
 
     model.compile(loss = {'y_xcam': mean_squared_error,
                         'y_ycam': mean_squared_error},
-            optimizer = RMSprop(),
+            optimizer = RMSprop(1e-3),
                 metrics = ['mae'])
 
     callbacks = [
