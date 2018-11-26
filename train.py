@@ -114,12 +114,12 @@ if __name__ == '__main__':
 
     # train, val = train_test_split(traindf, test_size=0.1)
 
-    model_name = "basemodel_{}-lr:{}-bs:{}-o:{}-loss:{}".format(shape, lr, BATCH_SIZE, optimizer, model_loss)
+    model_name = "basemodel_{}-lr:{}-bs:{}-loss:{}-{}".format(shape, lr, BATCH_SIZE, model_loss, optimizer)
     model = mobnet(shape, 'imagenet')
 
     model.compile(loss = loss,
                 optimizer = optim,
-                metrics = ['mae', 'acc'])
+                metrics = ['mae'])
 
     callbacks = [
         ReduceLROnPlateau(monitor='val_loss',
@@ -127,8 +127,12 @@ if __name__ == '__main__':
                         patience=4,
                         verbose=1,
                         min_delta=1e-5),
-        TensorBoard(log_dir='./logs/{}'.format(model_name),
-                    batch_size=BATCH_SIZE)
+        TensorBoard(log_dir='./stage2-logs/{}'.format(model_name),
+                    batch_size=BATCH_SIZE),
+        ModelCheckpoint(monitor='val_loss',
+                        filepath='{}-{}-{}-weights.hdf5'.format(model_loss, lr, optimizer),
+                        save_best_only=True,
+                        verbose=1)
     ]
 
     model.fit_generator(generator=train_generator(train, shape),
