@@ -5,8 +5,8 @@ import cv2
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from keras.losses import mean_squared_error
-from keras.optimizers import RMSprop
+from keras.losses import mean_squared_error, logcosh, mean_absolute_error
+from keras.optimizers import RMSprop, Adam
 from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping, TensorBoard
 
 from model import mobnet
@@ -45,8 +45,8 @@ def train_generator(df, shape):
             x_batch = []
             y_batch = []
             
-            xcam = df_batch['XCam']
-            ycam = df_batch['YCam']
+            xcam = df_batch['XCam'].values
+            ycam = df_batch['YCam'].values
             
             for index, _fn in enumerate(df_batch['file_names']):
                 img = cv2.imread('{}/{}'.format(dset_path, _fn))
@@ -55,8 +55,7 @@ def train_generator(df, shape):
 #               # === You can add data augmentations here. === #
 #                 if np.random.random() < 0.5:
 #                     img, mask = img[:, ::-1, :], mask[..., ::-1, :]  # random horizontal flip
-                
-                y_batch.append(xcam[index], ycam[index])
+                y_batch.append([xcam[index], ycam[index]])
                 x_batch.append(img)
             
             yield np.asarray(x_batch), np.asarray(y_batch)
@@ -80,35 +79,47 @@ if __name__ == '__main__':
 
     parser.add_option('-l', '--lr',
     action="store", dest="lr",
-    help="lr", default="1e-3")
+    help="lr", default="3e-3")
+
+    parser.add_option('-o', '--optimizer',
+    action="store", dest="o",
+    help="o", default="rmsprop")
+
+    parser.add_option('-k', '--loss',
+    action="store", dest="loss",
+    help="s", default="mse")
 
     options, args = parser.parse_args()
 
     epochs = int(options.epochs)
     BATCH_SIZE = int(options.bs)
     shape = eval(options.s)
-    resize = eval(options.r)
-
-    # learning_rate = [4e-3, 1e-3]
-    # # 224, 224, 3 with pretrained weigths ~ 7 epochs => train mae ~2cm
-    # shapes = (320, 568, 3)
-    # model_resize = (450, 512, 1)
-    # model_weights = [None, None, None]
+    lr = float(options.lr)
+    optimizer = options.o
+    model_loss = options.loss
     
+    optim = RMSprop(lr)
+    if optimizer == 'Adam': 
+        optim = Adam(lr) 
+
+    loss = mean_squared_error
+    if model_loss == 'logcosh':
+        loss = logcosh
+    elif model_loss == 'mae':
+        loss = mean_absolute_error
 
     # testdf = pd.read_csv('test-df.csv')
-    train = pd.read_csv('portrait-train-df.csv')
-    val = pd.read_csv('portrait-train-df.csv')
+    train = pd.read_csv('traindf_sample.csv')
+    val = pd.read_csv('valdf_sample.csv')
 
     # train, val = train_test_split(traindf, test_size=0.1)
 
-    model_name = "basemodel_{}".format(shape)
+    model_name = "basemodel_{}-lr:{}-bs:{}-o:{}-loss:{}".format(shape, lr, BATCH_SIZE, optimizer, model_loss)
     model = mobnet(shape, 'imagenet')
 
-    model.compile(loss = {'y_xcam': mean_squared_error,
-                        'y_ycam': mean_squared_error},
-            optimizer = RMSprop(1e-3),
-                metrics = ['mae'])
+    model.compile(loss = loss,
+                optimizer = optim,
+                metrics = ['mae', 'acc'])
 
     callbacks = [
         ReduceLROnPlateau(monitor='val_loss',
@@ -116,7 +127,7 @@ if __name__ == '__main__':
                         patience=4,
                         verbose=1,
                         min_delta=1e-5),
-        TensorBoard(log_dir='./logs/{}-logs'.format(model_name),
+        TensorBoard(log_dir='./logs/{}'.format(model_name),
                     batch_size=BATCH_SIZE)
     ]
 
