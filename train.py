@@ -102,32 +102,30 @@ if __name__ == '__main__':
     if optimizer == 'Adam': 
         optim = Adam(lr) 
 
-    loss = mean_squared_error
-    if model_loss == 'logcosh':
-        loss = logcosh
-    elif model_loss == 'mae':
-        loss = mean_absolute_error
+    loss = logcosh
 
     # testdf = pd.read_csv('test-df.csv')
-    train = pd.read_csv('traindf_sample.csv')
-    val = pd.read_csv('valdf_sample.csv')
+    train = pd.read_csv('portrait-traindf.csv')
+    val = pd.read_csv('portrait-valdf.csv')
 
     # train, val = train_test_split(traindf, test_size=0.1)
 
     model_name = "basemodel_{}-lr:{}-bs:{}-loss:{}-{}".format(shape, lr, BATCH_SIZE, model_loss, optimizer)
-    model = mobnet(shape, 'imagenet')
+    model = mobnet(shape, None)
 
     model.compile(loss = loss,
                 optimizer = optim,
                 metrics = ['mae'])
 
+    model.load_weights('logcosh-0.001-RMSprop-weights.hdf5')
+
     callbacks = [
         ReduceLROnPlateau(monitor='val_loss',
-                        factor=0.2,
-                        patience=4,
+                        factor=0.5,
+                        patience=2,
                         verbose=1,
                         min_delta=1e-5),
-        TensorBoard(log_dir='./stage2-logs/{}'.format(model_name),
+        TensorBoard(log_dir='./stage3-logs/{}'.format(model_name),
                     batch_size=BATCH_SIZE),
         ModelCheckpoint(monitor='val_loss',
                         filepath='{}-{}-{}-weights.hdf5'.format(model_loss, lr, optimizer),
