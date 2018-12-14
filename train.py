@@ -101,7 +101,6 @@ if __name__ == '__main__':
     optim = RMSprop(lr)
     if optimizer == 'Adam': 
         optim = Adam(lr) 
-
     loss = logcosh
 
     # testdf = pd.read_csv('test-df.csv')
