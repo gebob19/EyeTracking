@@ -36,6 +36,12 @@ def orientation_data(p):
 
 dset_path = Path('../../gazecapture/')
 
+# - home button spot (right / left)
+# right = 3
+# left = 4
+file_names = "landscape-r"
+O = [3]
+
 # # Extract File Names For Keras Generator
 test_size = 0.1
 
@@ -79,11 +85,6 @@ def extract_data(cases, accepted_o=[1, 2, 3, 4]):
 # Extract all case names first to split => faces it hasnt seen before
 train_cases, test_cases = train_test_split(list(dset_path.iterdir()), test_size=test_size)
 
-# - home button spot (right / left)
-# right = 3
-# left = 4
-file_names = "landscape-r"
-O = [3]
 train_df = extract_data(train_cases, accepted_o=O)
 test_df = extract_data(test_cases, accepted_o=O)
 test_df.to_csv('{}-testdf.csv'.format(file_names))
