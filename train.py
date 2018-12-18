@@ -115,20 +115,17 @@ if __name__ == '__main__':
         optim = Adam(lr) 
     loss = logcosh
 
-    # testdf = pd.read_csv('test-df.csv')
-    train = pd.read_csv('landscape-traindf.csv')
-    val = pd.read_csv('landscape-valdf.csv')
+    fn = 'landscape-r'
+    train_df = pd.read_csv('{}-traindf.csv'.format(fn))
+    train, val = train_test_split(train_df, test_size=0.1)
 
-    # train, val = train_test_split(traindf, test_size=0.1)
-
-    model_name = "basemodel_{}-lr:{}-bs:{}-loss:{}-{}".format(shape, lr, BATCH_SIZE, model_loss, optimizer)
     model = mobnet(shape, None)
 
     model.compile(loss = loss,
                 optimizer = optim,
                 metrics = ['mae'])
 
-    # model.load_weights('logcosh-0.001-RMSprop-weights.hdf5')
+    model_name = '{}-{}-{}-{}'.format(fn, lr, optimizer, model_loss)
 
     callbacks = [
         ReduceLROnPlateau(monitor='val_loss',
@@ -136,25 +133,19 @@ if __name__ == '__main__':
                         patience=2,
                         verbose=1,
                         min_delta=1e-5),
-        TensorBoard(log_dir='./stage1-logs/{}'.format(model_name),
-                    batch_size=BATCH_SIZE)
+        TensorBoard(log_dir='./{}-data/stage1-logs/{}'.format(fn, model_name),
+                    batch_size=BATCH_SIZE),
     ]
+    
+    callbacks.append(ModelCheckpoint(monitor='val_loss',
+                    filepath='./{}-data/weights/{}-{}-{}.hdf5'.format(fn, lr, optimizer, model_loss),
+                    save_best_only=True,
+                    verbose=1))
 
-    for i in range(3):
-        train_sample = train.sample(frac=0.3)
-        val_sample = val.sample(frac=0.3)
-
-        callbacks.append(ModelCheckpoint(monitor='val_loss',
-                        filepath='{}-{}-{}-weights-{}.hdf5'.format(model_loss, lr, optimizer, i),
-                        save_best_only=True,
-                        verbose=1))
-
-        model.fit_generator(generator=train_generator(train_sample, shape),
-                                steps_per_epoch=np.ceil(float(len(train_sample)) / float(BATCH_SIZE)),
-                                epochs=epochs,
-                                verbose=1,
-                                callbacks=callbacks,
-                                validation_data=train_generator(val_sample, shape),
-                                validation_steps=np.ceil(float(len(val_sample)) / float(BATCH_SIZE)))
-        
-        callbacks = callbacks[:-1]
+    model.fit_generator(generator=train_generator(train, shape),
+                            steps_per_epoch=np.ceil(float(len(train)) / float(BATCH_SIZE)),
+                            epochs=epochs,
+                            verbose=1,
+                            callbacks=callbacks,
+                            validation_data=train_generator(val, shape),
+                            validation_steps=np.ceil(float(len(val)) / float(BATCH_SIZE))
