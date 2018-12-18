@@ -87,9 +87,6 @@ train_cases, test_cases = train_test_split(list(dset_path.iterdir()), test_size=
 
 train_df = extract_data(train_cases, accepted_o=O)
 test_df = extract_data(test_cases, accepted_o=O)
+train_df.to_csv('{}-traindf.csv'.format(file_names))
 test_df.to_csv('{}-testdf.csv'.format(file_names))
-
-strain, sval = train_test_split(train_df, test_size=0.1)
-strain.to_csv('{}-traindf.csv'.format(file_names))
-sval.to_csv('{}-valdf.csv'.format(file_names))
  
