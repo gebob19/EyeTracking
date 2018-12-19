@@ -148,4 +148,4 @@ if __name__ == '__main__':
                             verbose=1,
                             callbacks=callbacks,
                             validation_data=train_generator(val, shape),
-                            validation_steps=np.ceil(float(len(val)) / float(BATCH_SIZE))
+                            validation_steps=np.ceil(float(len(val)) / float(BATCH_SIZE)))
