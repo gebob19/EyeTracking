@@ -125,7 +125,7 @@ if __name__ == '__main__':
                 optimizer = optim,
                 metrics = ['mae'])
 
-    model.load_weights('{}-data/weights/0.002-RMSprop-logcosh.hdf5')
+    model.load_weights('{}-data/weights/0.002-RMSprop-logcosh.hdf5'.format(fn))
 
     model_name = '{}-{}-{}-{}'.format(fn, lr, optimizer, model_loss)
 
