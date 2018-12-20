@@ -116,8 +116,10 @@ if __name__ == '__main__':
     loss = logcosh
 
     fn = 'landscape-r'
+    test_df = pd.read_csv('{}-data/{}-testdf.csv'.format(fn, fn))
     train_df = pd.read_csv('{}-data/{}-traindf.csv'.format(fn, fn))
-    train, val = train_test_split(train_df, test_size=0.1)
+
+    test, val = train_test_split(test_df, test_size=0.1)
 
     model = mobnet(shape, None)
 
@@ -125,7 +127,7 @@ if __name__ == '__main__':
                 optimizer = optim,
                 metrics = ['mae'])
 
-    model.load_weights('{}-data/weights/0.002-RMSprop-logcosh.hdf5'.format(fn))
+    # model.load_weights('{}-data/weights/0.002-RMSprop-logcosh.hdf5'.format(fn))
 
     model_name = '{}-{}-{}-{}'.format(fn, lr, optimizer, model_loss)
 
