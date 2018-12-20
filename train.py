@@ -146,8 +146,8 @@ if __name__ == '__main__':
                     save_best_only=True,
                     verbose=1))
 
-    model.fit_generator(generator=train_generator(train, shape),
-                            steps_per_epoch=np.ceil(float(len(train)) / float(BATCH_SIZE)),
+    model.fit_generator(generator=train_generator(train_df, shape),
+                            steps_per_epoch=np.ceil(float(len(train_df)) / float(BATCH_SIZE)),
                             epochs=epochs,
                             verbose=1,
                             callbacks=callbacks,
