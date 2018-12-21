@@ -26,14 +26,18 @@ def threadsafe_generator(f):
     return g
 
 @threadsafe_generator
-def train_generator(df, shape, batch_size, dset_path):
+def train_generator(df, shape, batch_size, dset_path, shuffle=True):
     while True:
-        shuffle_indices = np.arange(len(df))
-        shuffle_indices = np.random.permutation(shuffle_indices)
-        
+        if shuffle:
+            shuffle_indices = np.arange(len(df))
+            shuffle_indices = np.random.permutation(shuffle_indices)
+
         for start in range(0, len(df), batch_size):
             end = min(start + batch_size, len(df))
-            df_batch = df.iloc[shuffle_indices[start:end]]
+            if shuffle:
+                df_batch = df.iloc[shuffle_indices[start:end]]
+            else:
+                df_batch = df.iloc[start:end]
             
             x_batch = []
             y_batch = []
