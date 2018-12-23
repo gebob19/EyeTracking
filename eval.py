@@ -7,10 +7,10 @@ from keras.optimizers import RMSprop, Adam
 from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping, TensorBoard
 
 from model import mobnet
-from generator import train_generator
+from generator import generator
 
 dset_path = '../gazecapture'
-dset_df = 'portrait'
+dset_df = 'landscape-l'
 
 shape = (375, 667, 3)
 lr = 1e-3
@@ -18,16 +18,16 @@ optim = RMSprop(lr)
 loss = logcosh
 BATCH_SIZE = 16
 
-test = pd.read_csv('{}-test-df.csv'.format(dset_df))
+test = pd.read_csv('{}-data/{}-testdf.csv'.format(dset_df, dset_df))
 model = mobnet(shape, None)
 model.compile(loss = loss,
             optimizer = optim,
             metrics = ['mae', 'mse'])
 
 
-# model.load_weights('logcosh-0.001-RMSprop-weights.hdf5')
+model.load_weights('{}-data/weights/0.002-RMSprop-logcosh.hdf5'.format(dset_df))
 
-metrics = model.evaluate_generator(generator=train_generator(test, shape, BATCH_SIZE, dset_path),
+metrics = model.evaluate_generator(generator=generator(test, shape, BATCH_SIZE, dset_path, training=False),
                          steps=np.ceil(float(len(test)) / float(BATCH_SIZE)),
                          verbose=1)
 
