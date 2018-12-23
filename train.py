@@ -10,71 +10,9 @@ from keras.optimizers import RMSprop, Adam
 from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping, TensorBoard
 
 from model import mobnet
-
-class ThreadSafeIterator:
-    def __init__(self, it):
-        self.it = it
-        self.lock = threading.Lock()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        with self.lock:
-            return self.it.__next__()
-
-def threadsafe_generator(f):
-    """
-    A decorator that takes a generator function and makes it thread-safe.
-    """
-    def g(*args, **kwargs):
-        return ThreadSafeIterator(f(*args, **kwargs))
-
-    return g
-
-@threadsafe_generator
-def train_generator(df, shape):
-    while True:
-        shuffle_indices = np.arange(len(df))
-        shuffle_indices = np.random.permutation(shuffle_indices)
-        
-        for start in range(0, len(df), BATCH_SIZE):
-            end = min(start + BATCH_SIZE, len(df))
-            df_batch = df.iloc[shuffle_indices[start:end]]
-            
-            x_batch = []
-            y_batch = []
-            
-            xcam = df_batch['XCam'].values
-            ycam = df_batch['YCam'].values
-            faceh = df_batch['FaceH'].values
-            faceW = df_batch['FaceW'].values
-            faceX = df_batch['FaceX'].values
-            faceY = df_batch['FaceY'].values
-            isValid = df_batch['IsValid'].values
-            
-            for index, _fn in enumerate(df_batch['file_names']):
-                img = cv2.imread('{}/{}'.format(dset_path, _fn))
-                img = cv2.resize(img, (shape[1], shape[0]), interpolation=cv2.INTER_AREA)
-
-                # data augmentation
-                if np.random.random() < 0.5 and isValid[index]:
-                    fh, fw, fx, fy = faceh[index], faceW[index], faceX[index], faceY[index]
-                    # sample amount of noise from distribution
-                    noise_amount = np.random.uniform(low=5, high=100)
-                    noise = np.random.randint(noise_amount, size=shape, dtype='uint8')
-                    # zero noise from face
-                    noise[int(fy):int(fy+fh), int(fx):int(fx+fw), :] = 0
-                    img = img + noise
-
-                y_batch.append([xcam[index], ycam[index]])
-                x_batch.append(img)
-            
-            yield np.asarray(x_batch), np.asarray(y_batch)
+from generator import generator
 
 if __name__ == '__main__':
-    dset_path = '../gazecapture'
-
     parser = optparse.OptionParser()
 
     parser.add_option('-e', '--epochs',
@@ -103,6 +41,7 @@ if __name__ == '__main__':
 
     options, args = parser.parse_args()
 
+    dset_path = '../gazecapture'
     epochs = int(options.epochs)
     BATCH_SIZE = int(options.bs)
     shape = eval(options.s)
@@ -115,10 +54,9 @@ if __name__ == '__main__':
         optim = Adam(lr) 
     loss = logcosh
 
-    fn = 'landscape-r'
+    fn = 'landscape-l'
     test_df = pd.read_csv('{}-data/{}-testdf.csv'.format(fn, fn))
-    train_df = pd.read_csv('{}-data/{}-traindf.csv'.format(fn, fn))
-
+    train = pd.read_csv('{}-data/{}-traindf.csv'.format(fn, fn))
     test, val = train_test_split(test_df, test_size=0.1)
 
     model = mobnet(shape, None)
@@ -137,7 +75,7 @@ if __name__ == '__main__':
                         patience=2,
                         verbose=1,
                         min_delta=1e-5),
-        TensorBoard(log_dir='./{}-data/stage1-logs/{}'.format(fn, model_name),
+        TensorBoard(log_dir='./{}-data/logs/{}'.format(fn, model_name),
                     batch_size=BATCH_SIZE),
     ]
     
@@ -146,10 +84,10 @@ if __name__ == '__main__':
                     save_best_only=True,
                     verbose=1))
 
-    model.fit_generator(generator=train_generator(train_df, shape),
-                            steps_per_epoch=np.ceil(float(len(train_df)) / float(BATCH_SIZE)),
+    model.fit_generator(generator=generator(train, shape, BATCH_SIZE, dset_path),
+                            steps_per_epoch=np.ceil(float(len(train)) / float(BATCH_SIZE)),
                             epochs=epochs,
                             verbose=1,
                             callbacks=callbacks,
-                            validation_data=train_generator(val, shape),
+                            validation_data=generator(val, shape, BATCH_SIZE, dset_path, training=False),
                             validation_steps=np.ceil(float(len(val)) / float(BATCH_SIZE)))
