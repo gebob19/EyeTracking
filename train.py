@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     fn = 'portrait'
     test_df = pd.read_csv('./papersplit/{}/testdf.csv'.format(fn))
-    train = pd.read_csv('./papersplit/{}/traindf.csv'.format(fn))
+    train = pd.read_csv('./papersplit/{}/traindf.csv'.format(fn)).sample(frac=0.1)
     val = pd.read_csv('./papersplit/{}/valdf.csv'.format(fn))
 
     model = mobnet(shape, None)
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     model_name = '{}-{}-{}-{}'.format(fn, lr, optimizer, model_loss)
 
     callbacks = [
-        ReduceLROnPlateau(monitor='val_loss',
+        ReduceLROnPlateau(monitor='val_mean_absolute_error',
                         factor=0.5,
                         patience=2,
                         verbose=1,
