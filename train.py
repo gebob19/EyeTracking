@@ -54,10 +54,10 @@ if __name__ == '__main__':
         optim = Adam(lr) 
     loss = logcosh
 
-    fn = 'landscape-l'
-    test_df = pd.read_csv('{}-data/{}-testdf.csv'.format(fn, fn))
-    train = pd.read_csv('{}-data/{}-traindf.csv'.format(fn, fn))
-    test, val = train_test_split(test_df, test_size=0.1)
+    fn = 'portrait'
+    test_df = pd.read_csv('./papersplit/{}/testdf.csv'.format(fn))
+    train = pd.read_csv('./papersplit/{}/traindf.csv'.format(fn))
+    val = pd.read_csv('./papersplit/{}/valdf.csv'.format(fn))
 
     model = mobnet(shape, None)
 
@@ -65,7 +65,7 @@ if __name__ == '__main__':
                 optimizer = optim,
                 metrics = ['mae'])
 
-    # model.load_weights('{}-data/weights/0.002-RMSprop-logcosh.hdf5'.format(fn))
+#     model.load_weights('./papersplit/{}/weights/0.0033-RMSprop-logcosh.hdf5'.format(fn))
 
     model_name = '{}-{}-{}-{}'.format(fn, lr, optimizer, model_loss)
 
@@ -75,12 +75,12 @@ if __name__ == '__main__':
                         patience=2,
                         verbose=1,
                         min_delta=1e-5),
-        TensorBoard(log_dir='./{}-data/logs/{}'.format(fn, model_name),
+        TensorBoard(log_dir='./papersplit/{}/logs/{}'.format(fn, model_name),
                     batch_size=BATCH_SIZE),
     ]
     
-    callbacks.append(ModelCheckpoint(monitor='val_loss',
-                    filepath='./{}-data/weights/{}-{}-{}.hdf5'.format(fn, lr, optimizer, model_loss),
+    callbacks.append(ModelCheckpoint(monitor='val_mean_absolute_error',
+                    filepath='./papersplit/{}/weights/{}-{}-{}.hdf5'.format(fn, lr, optimizer, model_loss),
                     save_best_only=True,
                     verbose=1))
 
