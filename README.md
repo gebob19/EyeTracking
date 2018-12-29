@@ -1,6 +1,5 @@
 # OpticalAI
 
-
 # GazeCapture Dataset 
 
 The problem was to create a neural network which given an image of a user looking at their phone (from the front-facing camera) would predict where a user was looking on their phone.
