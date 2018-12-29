@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     fn = 'portrait'
     test_df = pd.read_csv('./papersplit/{}/testdf.csv'.format(fn))
-    train = pd.read_csv('./papersplit/{}/traindf.csv'.format(fn)).sample(frac=0.1)
+    train = pd.read_csv('./papersplit/{}/traindf.csv'.format(fn))
     val = pd.read_csv('./papersplit/{}/valdf.csv'.format(fn))
 
     model = mobnet(shape, None)
