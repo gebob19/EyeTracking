@@ -1,3 +1,5 @@
+The main motivating reason for me to start this project was the importance of assistive technology for those with disabilities. This research pushes forward efforts to provide eye tracking software for the public at no cost, using only a mobile device. 
+
 # GazeCapture Dataset 
 
 The problem was to create a neural network which given an image of a user looking at their phone (from the front-facing camera) would predict where a user was looking on their phone.
